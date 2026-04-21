@@ -1,11 +1,9 @@
 import Flutter
 import Foundation
 
-public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, URLSessionWebSocketDelegate {
+public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
   private var eventSink: FlutterEventSink?
-  private var session: URLSession?
-  private var webSocketTask: URLSessionWebSocketTask?
-  private var trustAllCertificates = false
+  private var webSocketClient: AnyObject?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let instance = NativeWebsocketClientPlugin()
@@ -50,6 +48,84 @@ public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStream
   }
 
   private func connect(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard #available(iOS 13.0, *) else {
+      result(unsupportedIOSVersionError())
+      return
+    }
+
+    disposeSocket()
+
+    let client = URLSessionNativeWebSocketClient(eventSinkProvider: { [weak self] in
+      self?.eventSink
+    })
+    webSocketClient = client
+    client.connect(call, result: result)
+  }
+
+  private func sendText(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard #available(iOS 13.0, *) else {
+      result(unsupportedIOSVersionError())
+      return
+    }
+    guard let client = webSocketClient as? URLSessionNativeWebSocketClient else {
+      result(FlutterError(code: "not_connected", message: "WebSocket is not connected.", details: nil))
+      return
+    }
+    client.sendText(call, result: result)
+  }
+
+  private func sendBytes(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard #available(iOS 13.0, *) else {
+      result(unsupportedIOSVersionError())
+      return
+    }
+    guard let client = webSocketClient as? URLSessionNativeWebSocketClient else {
+      result(FlutterError(code: "not_connected", message: "WebSocket is not connected.", details: nil))
+      return
+    }
+    client.sendBytes(call, result: result)
+  }
+
+  private func close(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard #available(iOS 13.0, *) else {
+      result(unsupportedIOSVersionError())
+      return
+    }
+    guard let client = webSocketClient as? URLSessionNativeWebSocketClient else {
+      result(nil)
+      return
+    }
+    client.close(call, result: result)
+  }
+
+  private func disposeSocket() {
+    if #available(iOS 13.0, *), let client = webSocketClient as? URLSessionNativeWebSocketClient {
+      client.disposeSocket()
+    }
+    webSocketClient = nil
+  }
+
+  private func unsupportedIOSVersionError() -> FlutterError {
+    return FlutterError(
+      code: "unsupported_ios_version",
+      message: "native_websocket_client requires iOS 13.0 or newer at runtime.",
+      details: nil
+    )
+  }
+}
+
+@available(iOS 13.0, *)
+private final class URLSessionNativeWebSocketClient: NSObject, URLSessionWebSocketDelegate {
+  private let eventSinkProvider: () -> FlutterEventSink?
+  private var session: URLSession?
+  private var webSocketTask: URLSessionWebSocketTask?
+  private var trustAllCertificates = false
+
+  init(eventSinkProvider: @escaping () -> FlutterEventSink?) {
+    self.eventSinkProvider = eventSinkProvider
+  }
+
+  func connect(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard
       let arguments = call.arguments as? [String: Any],
       let urlString = arguments["url"] as? String,
@@ -82,7 +158,7 @@ public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStream
     result(nil)
   }
 
-  private func sendText(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+  func sendText(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let task = webSocketTask else {
       result(FlutterError(code: "not_connected", message: "WebSocket is not connected.", details: nil))
       return
@@ -98,7 +174,7 @@ public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStream
     }
   }
 
-  private func sendBytes(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+  func sendBytes(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let task = webSocketTask else {
       result(FlutterError(code: "not_connected", message: "WebSocket is not connected.", details: nil))
       return
@@ -119,7 +195,7 @@ public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStream
     }
   }
 
-  private func close(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+  func close(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     let arguments = call.arguments as? [String: Any]
     let codeValue = arguments?["code"] as? Int ?? 1000
     let reason = arguments?["reason"] as? String ?? "normal closure"
@@ -128,7 +204,7 @@ public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStream
     result(nil)
   }
 
-  private func disposeSocket() {
+  func disposeSocket() {
     webSocketTask?.cancel(with: .normalClosure, reason: "dispose".data(using: .utf8))
     webSocketTask = nil
     session?.invalidateAndCancel()
@@ -163,8 +239,9 @@ public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStream
   }
 
   private func sendEvent(_ event: [String: Any?]) {
+    let eventSink = eventSinkProvider()
     DispatchQueue.main.async {
-      self.eventSink?(event)
+      eventSink?(event)
     }
   }
 

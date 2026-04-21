@@ -31,7 +31,8 @@ flutter pub get
 - Android Java: Java 8
 - Android Gradle Plugin: compatible with old projects; this plugin does not require AGP 7 `namespace`
 - Android WebSocket engine: OkHttp `3.12.13` for old Android compatibility
-- iOS minimum deployment target: 13.0 for `URLSessionWebSocketTask`
+- iOS pod minimum deployment target: 12.0 for host app compatibility
+- iOS WebSocket runtime requirement: 13.0 or newer for `URLSessionWebSocketTask`
 
 The Dart API avoids Dart 3 syntax.
 
@@ -52,7 +53,9 @@ For `wss://` devices using a self-signed certificate, pass `trustAllCertificates
 
 ## iOS Configuration
 
-iOS uses `URLSessionWebSocketTask`, so the deployment target is iOS 13.0 or newer.
+iOS uses `URLSessionWebSocketTask`. The pod can be installed into host apps with an
+iOS 12.0 deployment target, but WebSocket calls return `unsupported_ios_version`
+when running on iOS 12.x.
 
 For local network device access, the host app may need:
 
