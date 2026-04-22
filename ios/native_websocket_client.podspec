@@ -13,6 +13,7 @@ Native WebSocket client for Flutter using OkHttp on Android and URLSessionWebSoc
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'native_websocket_client' => 'dev@example.com' }
   s.source           = { :path => '.' }
+  s.static_framework = true
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '12.0'
@@ -22,6 +23,14 @@ Native WebSocket client for Flutter using OkHttp on Android and URLSessionWebSoc
   s.frameworks = ['Foundation']
 
   # Flutter.framework does not contain a i386 slice.
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386'
+  }
+  s.user_target_xcconfig = {
+    'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES' => 'YES',
+    'LIBRARY_SEARCH_PATHS' => '$(inherited) $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) /usr/lib/swift',
+    'LD_RUNPATH_SEARCH_PATHS' => '$(inherited) /usr/lib/swift'
+  }
   s.swift_version = '5.0'
 end
