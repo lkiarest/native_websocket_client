@@ -1,4 +1,5 @@
 import Flutter
+import Dispatch
 import Foundation
 
 public class NativeWebsocketClientPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {

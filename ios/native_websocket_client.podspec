@@ -19,8 +19,7 @@ Native WebSocket client for Flutter using OkHttp on Android and URLSessionWebSoc
   
   # 声明 Swift 代码所需的框架依赖
   # Foundation - URLSession, URLRequest, URLAuthenticationChallenge, URLCredential, Data, String 等
-  # Dispatch - DispatchQueue（用于主线程事件回调）
-  s.frameworks = ['Foundation', 'Dispatch']
+  s.frameworks = ['Foundation']
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
