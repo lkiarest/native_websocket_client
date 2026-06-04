@@ -16,14 +16,14 @@ Native WebSocket client for Flutter using OkHttp on Android and URLSessionWebSoc
   s.source_files = 'Classes/**/*.{h,m}'
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
-  s.platform = :ios, '14.0'
+  s.platform = :ios, '12.0'
   
   s.frameworks = ['Foundation', 'Security']
 
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
-    'IPHONEOS_DEPLOYMENT_TARGET' => '14.0',
+    'IPHONEOS_DEPLOYMENT_TARGET' => '12.0',
     'VALID_ARCHS[sdk=iphoneos*]' => 'arm64 arm64e'
   }
 end
