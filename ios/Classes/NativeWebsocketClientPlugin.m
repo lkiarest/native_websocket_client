@@ -36,6 +36,9 @@ API_AVAILABLE(ios(13.0))
 
 - (void)receiveNextMessage;
 - (void)sendEvent:(NSDictionary *)event;
+- (NSString *)errorCodeForError:(NSError *)error;
+- (NSDictionary *)errorDetailsForError:(NSError *)error;
+- (NSString *)webSocketTaskStateDescription;
 
 @end
 
@@ -283,8 +286,8 @@ API_AVAILABLE(ios(13.0))
             [strongSelf sendEvent:@{
                 @"type": @"error",
                 @"message": error.localizedDescription ?: @"",
-                @"code": NSStringFromClass([error class]) ?: @"NSError",
-                @"details": [NSNull null]
+                @"code": [strongSelf errorCodeForError:error],
+                @"details": [strongSelf errorDetailsForError:error]
             }];
             return;
         }
@@ -299,6 +302,50 @@ API_AVAILABLE(ios(13.0))
             [strongSelf receiveNextMessage];
         }
     }];
+}
+
+- (NSString *)errorCodeForError:(NSError *)error {
+    return [NSString stringWithFormat:@"%@:%ld", error.domain ?: @"NSError", (long)error.code];
+}
+
+- (NSDictionary *)errorDetailsForError:(NSError *)error {
+    NSMutableDictionary *details = [NSMutableDictionary dictionary];
+    details[@"domain"] = error.domain ?: @"";
+    details[@"code"] = @(error.code);
+    details[@"localizedDescription"] = error.localizedDescription ?: @"";
+    details[@"webSocketTaskState"] = [self webSocketTaskStateDescription];
+    if (error.localizedFailureReason.length > 0) {
+        details[@"localizedFailureReason"] = error.localizedFailureReason;
+    }
+    if (error.localizedRecoverySuggestion.length > 0) {
+        details[@"localizedRecoverySuggestion"] = error.localizedRecoverySuggestion;
+    }
+    NSError *underlyingError = error.userInfo[NSUnderlyingErrorKey];
+    if ([underlyingError isKindOfClass:[NSError class]]) {
+        details[@"underlyingError"] = @{
+            @"domain": underlyingError.domain ?: @"",
+            @"code": @(underlyingError.code),
+            @"localizedDescription": underlyingError.localizedDescription ?: @""
+        };
+    }
+    return details;
+}
+
+- (NSString *)webSocketTaskStateDescription {
+    if (!self.webSocketTask) {
+        return @"nil";
+    }
+    switch (self.webSocketTask.state) {
+        case NSURLSessionTaskStateRunning:
+            return @"running";
+        case NSURLSessionTaskStateSuspended:
+            return @"suspended";
+        case NSURLSessionTaskStateCanceling:
+            return @"canceling";
+        case NSURLSessionTaskStateCompleted:
+            return @"completed";
+    }
+    return @"unknown";
 }
 
 - (void)sendEvent:(NSDictionary *)event {

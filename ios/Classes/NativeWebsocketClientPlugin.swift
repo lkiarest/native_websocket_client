@@ -232,10 +232,57 @@ private final class URLSessionNativeWebSocketClient: NSObject, URLSessionWebSock
         self.sendEvent([
           "type": "error",
           "message": error.localizedDescription,
-          "code": String(describing: type(of: error)),
-          "details": nil
+          "code": self.errorCode(error),
+          "details": self.errorDetails(error)
         ])
       }
+    }
+  }
+
+  private func errorCode(_ error: Error) -> String {
+    let nsError = error as NSError
+    return "\(nsError.domain):\(nsError.code)"
+  }
+
+  private func errorDetails(_ error: Error) -> [String: Any] {
+    let nsError = error as NSError
+    var details: [String: Any] = [
+      "domain": nsError.domain,
+      "code": nsError.code,
+      "localizedDescription": nsError.localizedDescription,
+      "webSocketTaskState": webSocketTaskStateDescription()
+    ]
+    if let failureReason = nsError.localizedFailureReason {
+      details["localizedFailureReason"] = failureReason
+    }
+    if let recoverySuggestion = nsError.localizedRecoverySuggestion {
+      details["localizedRecoverySuggestion"] = recoverySuggestion
+    }
+    if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+      details["underlyingError"] = [
+        "domain": underlyingError.domain,
+        "code": underlyingError.code,
+        "localizedDescription": underlyingError.localizedDescription
+      ]
+    }
+    return details
+  }
+
+  private func webSocketTaskStateDescription() -> String {
+    guard let task = webSocketTask else {
+      return "nil"
+    }
+    switch task.state {
+    case .running:
+      return "running"
+    case .suspended:
+      return "suspended"
+    case .canceling:
+      return "canceling"
+    case .completed:
+      return "completed"
+    @unknown default:
+      return "unknown"
     }
   }
 
